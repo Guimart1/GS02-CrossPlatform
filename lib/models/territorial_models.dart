@@ -10,6 +10,16 @@ enum RiskType {
   final IconData icon;
 }
 
+enum ChartPeriod {
+  h24('24h', 1),
+  d3('3 dias', 3),
+  d7('7 dias', 7);
+
+  const ChartPeriod(this.label, this.days);
+  final String label;
+  final int days;
+}
+
 enum RiskLevel {
   baixo('Baixo', AppColors.low),
   moderado('Moderado', AppColors.moderate),

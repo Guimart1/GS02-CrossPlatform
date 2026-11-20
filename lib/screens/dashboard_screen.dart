@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/territorial_models.dart';
 import '../state/territorial_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/flow_painters.dart';
@@ -13,6 +14,25 @@ class DashboardScreen extends StatelessWidget {
 
   final TerritorialState state;
   final VoidCallback onNavigateToAlerts;
+
+  String _formatDate(DateTime dt) {
+    final d = dt.day.toString().padLeft(2, '0');
+    final m = dt.month.toString().padLeft(2, '0');
+    return '$d/$m/${dt.year}';
+  }
+
+  Future<void> _pickDate(BuildContext context) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: state.selectedDate,
+      firstDate: now.subtract(const Duration(days: 60)),
+      lastDate: now.add(const Duration(days: 7)),
+    );
+    if (picked != null) {
+      await state.setChartDate(picked);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -153,7 +173,7 @@ class DashboardScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          // Gráfico de precipitação 24h
+          // Gráfico de precipitação alterável por data e período
           FlowStreakCard(
             highContrast: hc,
             child: Column(
@@ -162,23 +182,24 @@ class DashboardScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Fluxo Pluviométrico (24h)',
-                            style: TextStyle(
+                            'Fluxo Pluviométrico (${state.selectedPeriod.label})',
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          SizedBox(height: 2),
+                          const SizedBox(height: 2),
                           Text(
-                            'Barras em mm/h + curva de tendência integrada',
-                            style: TextStyle(
+                            'Total no período: ${state.periodRainfallMm.toStringAsFixed(1)} mm',
+                            style: const TextStyle(
                               fontSize: 12,
-                              color: AppColors.inkMuted,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
                             ),
                           ),
                         ],
@@ -190,6 +211,104 @@ class DashboardScreen extends StatelessWidget {
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // Controles de data e período
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  alignment: WrapAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            tooltip: 'Dia anterior',
+                            icon: const Icon(Icons.chevron_left, size: 20),
+                            onPressed: () => state.setChartDate(
+                              state.selectedDate.subtract(const Duration(days: 1)),
+                            ),
+                          ),
+                          InkWell(
+                            borderRadius: BorderRadius.circular(8),
+                            onTap: () => _pickDate(context),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 6,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today_outlined,
+                                    size: 14,
+                                    color: AppColors.primary,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _formatDate(state.selectedDate),
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            tooltip: 'Próximo dia',
+                            icon: const Icon(Icons.chevron_right, size: 20),
+                            onPressed: () {
+                              final next = state.selectedDate
+                                  .add(const Duration(days: 1));
+                              final maxDate =
+                                  DateTime.now().add(const Duration(days: 7));
+                              if (!next.isAfter(maxDate)) {
+                                state.setChartDate(next);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: ChartPeriod.values.map((period) {
+                        final isSelected = state.selectedPeriod == period;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: ChoiceChip(
+                            label: Text(period.label),
+                            selected: isSelected,
+                            visualDensity: VisualDensity.compact,
+                            onSelected: (_) => state.setChartPeriod(period),
+                            backgroundColor: AppColors.surface,
+                            selectedColor:
+                                AppColors.primary.withValues(alpha: 0.14),
+                            labelStyle: TextStyle(
+                              fontSize: 12,
+                              fontWeight:
+                                  isSelected ? FontWeight.w700 : FontWeight.w500,
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : AppColors.inkMuted,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),

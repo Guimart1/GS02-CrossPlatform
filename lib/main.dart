@@ -93,12 +93,6 @@ class _MainShellState extends State<_MainShell> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_titles[_currentIndex]),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: RiskPill(level: widget.state.highestRiskLevel),
-          ),
-        ],
       ),
       body: FlowLinesBackground(
         highContrast: widget.state.highContrast,

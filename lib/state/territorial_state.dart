@@ -23,6 +23,9 @@ class TerritorialState extends ChangeNotifier {
   bool anonymizeCitizenData = true;
 
   String selectedZoneId = 'z1';
+  DateTime selectedDate = DateTime.now();
+  ChartPeriod selectedPeriod = ChartPeriod.h24;
+  double periodRainfallMm = 60.8;
 
   List<TerritorialZone> zones = [
     const TerritorialZone(
@@ -123,6 +126,22 @@ class TerritorialState extends ChangeNotifier {
     await refreshTelemetry();
   }
 
+  Future<void> setChartDate(DateTime date) async {
+    final normalized = DateTime(date.year, date.month, date.day);
+    final current = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    if (normalized == current) return;
+    selectedDate = normalized;
+    notifyListeners();
+    await refreshTelemetry();
+  }
+
+  Future<void> setChartPeriod(ChartPeriod period) async {
+    if (selectedPeriod == period) return;
+    selectedPeriod = period;
+    notifyListeners();
+    await refreshTelemetry();
+  }
+
   Future<void> refreshTelemetry() async {
     isLoading = true;
     notifyListeners();
@@ -131,16 +150,23 @@ class TerritorialState extends ChangeNotifier {
     final result = await _weatherService.fetchHydroForecast(
       latitude: zone.latitude,
       longitude: zone.longitude,
+      referenceDate: selectedDate,
+      period: selectedPeriod,
     );
 
     hourlyHydro = result.hourlyData;
+    periodRainfallMm = result.rainfallPeriodMm;
     isLiveApi = result.isLiveApi;
     dataSourceLabel = result.sourceLabel;
     lastUpdated = DateTime.now();
 
     // Atualiza a zona selecionada com a leitura mais recente (mantendo variação realista se chuva for 0mm)
-    final updatedRain = result.rainfall24hMm > 0
-        ? result.rainfall24hMm
+    final updatedRain = result.rainfallPeriodMm > 0
+        ? (selectedPeriod == ChartPeriod.h24
+            ? result.rainfallPeriodMm
+            : double.parse(
+                (result.rainfallPeriodMm / selectedPeriod.days).toStringAsFixed(1),
+              ))
         : zone.rainfall24hMm;
     final updatedSoil = result.isLiveApi
         ? ((zone.soilSaturationPercent * 0.65) +

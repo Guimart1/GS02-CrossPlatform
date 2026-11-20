@@ -55,12 +55,17 @@ class PrecipitationChart extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: sampled
                 .map(
-                  (p) => Text(
-                    p.hourLabel,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.inkMuted,
+                  (p) => Expanded(
+                    child: Text(
+                      p.hourLabel,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.inkMuted,
+                      ),
                     ),
                   ),
                 )
@@ -125,6 +130,23 @@ class _PrecipitationChartPainter extends CustomPainter {
             ? barColor
             : barColor.withValues(alpha: 0.78);
       canvas.drawRRect(rect, barPaint);
+
+      // Valor numérico discreto acima de cada barra
+      final tp = TextPainter(
+        text: TextSpan(
+          text: p.precipitationMm.toStringAsFixed(0),
+          style: TextStyle(
+            fontSize: 9.5,
+            fontWeight: FontWeight.w700,
+            color: highContrast ? Colors.black : AppColors.inkMuted,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(
+        canvas,
+        Offset(cx - tp.width / 2, math.max(0, topY - tp.height - 6)),
+      );
 
       if (i == 0) {
         trendPath.moveTo(cx, topY - 4);
